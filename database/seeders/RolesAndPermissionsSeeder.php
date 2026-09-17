@@ -44,7 +44,11 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             'MANAGER' => ['plans.view', 'activities.view', 'reports.view'],
             'SUPERVISOR' => ['plans.view', 'activities.view', 'activities.verify', 'reports.view'],
-            'AGRONOMIST' => ['plans.view', 'plans.create', 'activities.view', 'activities.create'],
+            // *.view means "can see everyone's records" (monitoring). A field
+            // agronomist doesn't need it to see their own — *.create implies
+            // that — so it's deliberately left off here; granting it would
+            // widen an agronomist's visibility to the whole team's plans.
+            'AGRONOMIST' => ['plans.create', 'activities.create'],
         ];
 
         foreach ($rolePermissions as $role => $rolePerms) {

@@ -83,3 +83,16 @@ DELETE /api/v1/master/{resource}/{id}             (master_data.manage)
 `products` additionally accepts `?product_category_id=` to drive the dependent Kategori Produk -> Produk/Varietas dropdown (docs section 16) and returns the `category` relation inline. Seeded with the starter lists from docs sections 15-16 (7 activity types; BEKA/POMMIX/POMI under their categories).
 
 Activity Types, Product Categories, Positions, and Work Locations are all shaped identically (name/code/is_active), so they share one generic `SimpleMasterDataController` rather than four near-duplicate CRUD implementations; Products gets its own controller for the category relation/filter.
+
+### Planning (Milestone D)
+
+Activity plans (docs section 13) — a plan can carry multiple products (`activity_plan_products`, matching the docs' own section 31 schema baseline, which answers OPEN QUESTION #1 for plans/activities). State machine (docs section 13.3): `PLANNED -> READY -> CANCELLED`, both non-terminal states can be edited; `REALIZED` is reserved for the Activities module (Milestone E) to set when a realization is linked — the Planning API rejects setting it directly.
+
+```
+GET  /api/v1/plans            ?status=   (plans.view sees everyone's; otherwise only your own)
+GET  /api/v1/plans/{id}
+POST /api/v1/plans            { activity_type_id, location, planned_date, notes?, product_ids: [] } (plans.create)
+PUT  /api/v1/plans/{id}       partial update, incl. status                                          (plans.create + must be the creator)
+```
+
+Authorization default (docs section 44 Q9/Q11 are unresolved, so this is a documented assumption, not a confirmed rule): `plans.view` is a monitoring permission (ADMIN/MANAGER/SUPERVISOR/SUPER_ADMIN) — see every plan, read-only. `plans.create` (AGRONOMIST) — manage only the plans you created yourself; no separate "view own" permission is needed for that, so AGRONOMIST intentionally does **not** have `plans.view` (it would widen them to everyone's plans instead of just their own).
