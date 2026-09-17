@@ -8,9 +8,11 @@ services:
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
+      AWS_ENDPOINT: http://minio:9000
     depends_on:
       - postgres
       - redis
+      - minio
     networks:
       - ama
 
@@ -46,9 +48,37 @@ services:
     networks:
       - ama
 
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-ama_minio}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-ama_minio_secret}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ama-minio-data:/data
+    networks:
+      - ama
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 ${AWS_ACCESS_KEY_ID:-ama_minio} ${AWS_SECRET_ACCESS_KEY:-ama_minio_secret}; do sleep 1; done;
+      mc mb -p local/${AWS_BUCKET:-ama-evidence};
+      exit 0;
+      "
+    networks:
+      - ama
+
 networks:
   ama:
     driver: bridge
 
 volumes:
   ama-postgres-data:
+  ama-minio-data:

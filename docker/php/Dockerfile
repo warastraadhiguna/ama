@@ -6,7 +6,9 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libzip-dev \
     libpng-dev \
+    libjpeg62-turbo-dev \
     libonig-dev \
+    && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql pgsql zip gd bcmath \
     && pecl install redis \
     && docker-php-ext-enable redis \

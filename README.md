@@ -9,6 +9,7 @@ Source of truth for requirements/architecture: [`docs/AMA_SYSTEM_DOCUMENTATION_v
 - Laravel 13 (PHP 8.5)
 - PostgreSQL 16 + PostGIS 3.4
 - Redis (cache, session, queue)
+- MinIO (S3-compatible object storage for evidence photos; local dev only — see docs section 5.5)
 - Docker Compose for local environment parity
 
 ## Local development
@@ -35,6 +36,8 @@ Services:
 | app (http) | 8000 |
 | postgres | 5432 |
 | redis    | 6379 |
+| minio (S3 API) | 9000 |
+| minio (console) | 9001 |
 
 ## Testing
 
@@ -115,3 +118,21 @@ Realizing a plan (docs section 13.3) atomically: creates the activity, copies th
 New activities always start `DRAFT` (docs section 23's full state machine — `DRAFT/SUBMITTED/SYNCED/VERIFIED/REJECTED` — is modeled as an enum now so the design doesn't need to change later, but only `DRAFT` is reachable from this milestone). Deliberately out of scope here, coming in later milestones:
 - `POST /activities/{id}/location`, `/photos`, `/complete` — Milestone F (Evidence); `/complete` is what moves `DRAFT -> SUBMITTED`.
 - A `/activities/{id}/verify` review action gated by `activities.verify` — docs section 23 says V1 must not *force* approval, but the design should allow adding it, which the status enum already does.
+
+### Evidence (Milestone F)
+
+Adds `Modules/Evidence/`, covering the "Activity Evidence Bundle" (docs section 18): GPS + photo tied together through a capture session. **Naming deviation from docs section 6** (worth flagging per section 50's "report conflicts, don't silently pick"): the doc lists `Location` and `Media` as separate modules, but a capture session only makes sense with both together, and Milestone F itself bundles them as one deliverable — so this is one module instead of two. Can still be split later if a real need for that separation shows up.
+
+```
+POST /api/v1/activities/{id}/location  { capture_session_uuid, started_at, latitude, longitude, accuracy, altitude?, speed?, bearing?, provider?, captured_at_device }
+POST /api/v1/activities/{id}/photos    multipart: photo, capture_session_uuid, started_at, latitude, longitude, accuracy, captured_at_device
+POST /api/v1/activities/{id}/complete
+```
+
+All three require `activities.create` + being the activity's own creator, and the activity must still be `DRAFT`. `capture_session_uuid` is client-generated (find-or-create per activity) so retried location/photo uploads after a dropped connection don't create duplicate sessions. Photos: only `CameraX`/`image/jpeg|png` accepted (docs section 17.2), hashed with SHA-256 server-side, stored on the `s3` disk (MinIO locally — see `docker-compose.yml`; point `AWS_*` env vars at real S3/R2 for staging/production, docs section 5.5), max 15MB (docs section 17.4's upper bound — real compression is the client's job before upload). `/complete` requires at least one capture session with both a location and a photo, then moves the activity to `SUBMITTED`.
+
+Deliberately not evaluated yet (Milestone G — Integrity): mock-location detection, Play Integrity, the 30-60s GPS/photo time-window check, impossible-travel detection. `activity_photos.integrity_status` defaults to `PENDING` as a placeholder for that.
+
+Two real bugs found and fixed while building this (both covered by regression tests now):
+- The access token's Sanctum "name" is used to recover which device made a request (login names the token after `device_uuid`) — but a login *without* a device names the token the literal string `"login"`, not a UUID, which crashed the lookup against the uuid-typed `devices.device_uuid` column. `ResolveCurrentDevice` now checks `Str::isUuid()` first. This class of bug only reproduces through a **real** login (`postJson('/auth/login')`), not `actingAs()`, which fakes authentication without creating a token — the regression test therefore does a real login.
+- Docker Compose recreating the `app` container (e.g. on every `--build`) gives it a new internal IP; nginx's static `fastcgi_pass app:9000` had cached the old one and 502'd until manually restarted. Fixed with `resolver 127.0.0.11` + a `$app_upstream` variable in `docker/nginx/default.conf` so nginx re-resolves instead of caching for the worker's lifetime.
