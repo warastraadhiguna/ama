@@ -17,6 +17,9 @@ class StoreActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // docs section 22: client-generated, so a retried request after
+            // a dropped connection is safe to resend as-is.
+            'idempotency_key' => ['required', 'uuid'],
             'activity_plan_id' => ['nullable', 'integer', 'exists:activity_plans,id'],
             // Required only for manual realization — when activity_plan_id
             // is set, activity type and products are copied from the plan

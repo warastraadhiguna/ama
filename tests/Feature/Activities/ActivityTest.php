@@ -8,6 +8,7 @@ use App\Models\ActivityType;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Modules\Planning\Domain\Enums\PlanStatus;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -54,6 +55,7 @@ class ActivityTest extends TestCase
         $products = Product::factory()->count(2)->create();
 
         $response = $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/activities', [
+            'idempotency_key' => (string) Str::uuid(),
             'activity_type_id' => $activityType->id,
             'location' => 'Kios Tani Jaya',
             'notes' => 'Realisasi tanpa rencana',
@@ -66,11 +68,33 @@ class ActivityTest extends TestCase
             ->assertJsonCount(2, 'data.products');
     }
 
+    public function test_retrying_an_activity_creation_with_the_same_idempotency_key_does_not_duplicate_it(): void
+    {
+        $agronomist = $this->agronomist();
+        $activityType = ActivityType::factory()->create();
+        $product = Product::factory()->create();
+        $payload = [
+            'idempotency_key' => (string) Str::uuid(),
+            'activity_type_id' => $activityType->id,
+            'location' => 'Kios Tani Jaya',
+            'product_ids' => [$product->id],
+        ];
+
+        $first = $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/activities', $payload);
+        $first->assertStatus(201);
+
+        $retry = $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/activities', $payload);
+        $retry->assertStatus(200)->assertJsonPath('data.id', $first->json('data.id'));
+
+        $this->assertSame(1, Activity::count());
+    }
+
     public function test_manual_realization_requires_activity_type_and_products(): void
     {
         $agronomist = $this->agronomist();
 
         $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/activities', [
+            'idempotency_key' => (string) Str::uuid(),
             'location' => 'Kios Tani Jaya',
         ])->assertStatus(422);
     }
@@ -83,6 +107,7 @@ class ActivityTest extends TestCase
         $plan->products()->attach($product);
 
         $response = $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/activities', [
+            'idempotency_key' => (string) Str::uuid(),
             'activity_plan_id' => $plan->id,
             'location' => 'Lokasi aktual kunjungan',
         ]);
@@ -103,6 +128,7 @@ class ActivityTest extends TestCase
         $othersPlan = ActivityPlan::factory()->create(['status' => PlanStatus::Ready]);
 
         $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/activities', [
+            'idempotency_key' => (string) Str::uuid(),
             'activity_plan_id' => $othersPlan->id,
             'location' => 'Somewhere',
         ])->assertStatus(422);
@@ -114,6 +140,7 @@ class ActivityTest extends TestCase
         $plan = ActivityPlan::factory()->for($agronomist, 'creator')->create(['status' => PlanStatus::Cancelled]);
 
         $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/activities', [
+            'idempotency_key' => (string) Str::uuid(),
             'activity_plan_id' => $plan->id,
             'location' => 'Somewhere',
         ])->assertStatus(422);

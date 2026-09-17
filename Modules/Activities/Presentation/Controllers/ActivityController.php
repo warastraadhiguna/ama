@@ -51,11 +51,11 @@ class ActivityController extends Controller
     public function store(StoreActivityRequest $request, CreateActivityUseCase $useCase): JsonResponse
     {
         try {
-            $activity = $useCase->handle($request->user(), $request->validated());
+            $result = $useCase->handle($request->user(), $request->validated());
         } catch (PlanNotRealizableException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['data' => new ActivityResource($activity)], 201);
+        return response()->json(['data' => new ActivityResource($result['activity'])], $result['created'] ? 201 : 200);
     }
 }

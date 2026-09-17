@@ -50,9 +50,12 @@ class PlanController extends Controller
 
     public function store(StorePlanRequest $request, CreatePlanUseCase $useCase): JsonResponse
     {
-        $plan = $useCase->handle($request->user(), $request->validated());
+        $result = $useCase->handle($request->user(), $request->validated());
 
-        return response()->json(['data' => new PlanResource($plan)], 201);
+        // 200 (not 201) when a retried idempotency_key returned the
+        // original plan rather than creating a new one — the client should
+        // be able to tell "already done" apart from "just created".
+        return response()->json(['data' => new PlanResource($result['plan'])], $result['created'] ? 201 : 200);
     }
 
     public function update(UpdatePlanRequest $request, int $id, UpdatePlanUseCase $useCase): JsonResponse

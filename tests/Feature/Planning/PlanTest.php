@@ -7,6 +7,7 @@ use App\Models\ActivityType;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Modules\Planning\Domain\Enums\PlanStatus;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -52,6 +53,7 @@ class PlanTest extends TestCase
         $products = Product::factory()->count(2)->create();
 
         $response = $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/plans', [
+            'idempotency_key' => (string) Str::uuid(),
             'activity_type_id' => $activityType->id,
             'location' => 'Toko Tani Makmur, Bojonegoro',
             'planned_date' => now()->addDays(3)->toDateString(),
@@ -65,12 +67,35 @@ class PlanTest extends TestCase
             ->assertJsonCount(2, 'data.products');
     }
 
+    public function test_retrying_a_plan_creation_with_the_same_idempotency_key_does_not_duplicate_it(): void
+    {
+        $agronomist = $this->agronomist();
+        $activityType = ActivityType::factory()->create();
+        $product = Product::factory()->create();
+        $payload = [
+            'idempotency_key' => (string) Str::uuid(),
+            'activity_type_id' => $activityType->id,
+            'location' => 'Toko Tani Makmur, Bojonegoro',
+            'planned_date' => now()->addDays(3)->toDateString(),
+            'product_ids' => [$product->id],
+        ];
+
+        $first = $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/plans', $payload);
+        $first->assertStatus(201);
+
+        $retry = $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/plans', $payload);
+        $retry->assertStatus(200)->assertJsonPath('data.id', $first->json('data.id'));
+
+        $this->assertSame(1, ActivityPlan::count());
+    }
+
     public function test_creating_a_plan_requires_at_least_one_product(): void
     {
         $agronomist = $this->agronomist();
         $activityType = ActivityType::factory()->create();
 
         $this->actingAs($agronomist, 'sanctum')->postJson('/api/v1/plans', [
+            'idempotency_key' => (string) Str::uuid(),
             'activity_type_id' => $activityType->id,
             'location' => 'Toko Tani Makmur',
             'planned_date' => now()->addDay()->toDateString(),

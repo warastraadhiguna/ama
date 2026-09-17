@@ -144,6 +144,32 @@ class EvidenceTest extends TestCase
         Storage::assertExists($storedPath);
     }
 
+    public function test_reuploading_the_same_photo_bytes_to_the_same_session_does_not_duplicate_it(): void
+    {
+        Storage::fake();
+        $agronomist = $this->agronomist();
+        $activity = Activity::factory()->for($agronomist, 'creator')->create();
+        $sessionUuid = (string) Str::uuid();
+        $file = UploadedFile::fake()->image('evidence.jpg', 800, 600)->size(500);
+        $payload = fn () => [
+            'photo' => $file,
+            'capture_session_uuid' => $sessionUuid,
+            'started_at' => now()->toIso8601String(),
+            'latitude' => -7.150975,
+            'longitude' => 111.880566,
+            'accuracy' => 8.5,
+            'captured_at_device' => now()->toIso8601String(),
+        ];
+
+        $first = $this->actingAs($agronomist, 'sanctum')->post("/api/v1/activities/{$activity->id}/photos", $payload());
+        $first->assertStatus(201);
+
+        $retry = $this->actingAs($agronomist, 'sanctum')->post("/api/v1/activities/{$activity->id}/photos", $payload());
+        $retry->assertStatus(200)->assertJsonPath('data.id', $first->json('data.id'));
+
+        $this->assertSame(1, ActivityPhoto::count());
+    }
+
     public function test_completing_an_activity_without_any_evidence_fails(): void
     {
         $agronomist = $this->agronomist();

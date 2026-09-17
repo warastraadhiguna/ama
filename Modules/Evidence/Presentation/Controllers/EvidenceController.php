@@ -45,7 +45,7 @@ class EvidenceController extends Controller
         $activity = $this->findOwnActivity($request, $activityId);
 
         try {
-            $photo = $useCase->handle(
+            $result = $useCase->handle(
                 $activity,
                 $request->user(),
                 $this->currentDeviceTokenName($request),
@@ -56,13 +56,15 @@ class EvidenceController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
+        $photo = $result['photo'];
+
         return response()->json(['data' => [
             'id' => $photo->id,
             'capture_session_id' => $photo->capture_session_id,
             'sha256_hash' => $photo->sha256_hash,
             'file_size' => $photo->file_size,
             'integrity_status' => $photo->integrity_status,
-        ]], 201);
+        ]], $result['created'] ? 201 : 200);
     }
 
     public function complete(Request $request, int $activityId, CompleteActivityUseCase $useCase): JsonResponse

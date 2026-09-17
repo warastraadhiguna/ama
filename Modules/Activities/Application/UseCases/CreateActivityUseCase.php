@@ -13,19 +13,31 @@ use Modules\Planning\Domain\Enums\PlanStatus;
 class CreateActivityUseCase
 {
     /**
-     * @param  array{activity_plan_id: ?int, activity_type_id: ?int, location: string, notes: ?string, product_ids: list<int>}  $data
+     * @param  array{idempotency_key: string, activity_plan_id: ?int, activity_type_id: ?int, location: string, notes: ?string, product_ids: list<int>}  $data
+     * @return array{activity: Activity, created: bool}
      */
-    public function handle(User $creator, array $data): Activity
+    public function handle(User $creator, array $data): array
     {
-        if ($data['activity_plan_id'] ?? null) {
-            return $this->realizeFromPlan($creator, (int) $data['activity_plan_id'], $data);
+        // docs section 22: a retried create must not realize the same
+        // activity twice (or, for a from-plan realization, re-consume the
+        // plan a second time).
+        $existing = Activity::where('creator_id', $creator->id)
+            ->where('idempotency_key', $data['idempotency_key'])
+            ->first();
+
+        if ($existing) {
+            return ['activity' => $existing->load(['activityType', 'products', 'creator', 'plan']), 'created' => false];
         }
 
-        return $this->realizeManually($creator, $data);
+        $activity = ($data['activity_plan_id'] ?? null)
+            ? $this->realizeFromPlan($creator, (int) $data['activity_plan_id'], $data)
+            : $this->realizeManually($creator, $data);
+
+        return ['activity' => $activity, 'created' => true];
     }
 
     /**
-     * @param  array{location: string, notes: ?string}  $data
+     * @param  array{idempotency_key: string, location: string, notes: ?string}  $data
      */
     private function realizeFromPlan(User $creator, int $planId, array $data): Activity
     {
@@ -46,6 +58,7 @@ class CreateActivityUseCase
             $activity = Activity::create([
                 'activity_plan_id' => $plan->id,
                 'creator_id' => $creator->id,
+                'idempotency_key' => $data['idempotency_key'],
                 'activity_type_id' => $plan->activity_type_id,
                 'location' => $data['location'],
                 'notes' => $data['notes'] ?? null,
@@ -63,7 +76,7 @@ class CreateActivityUseCase
     }
 
     /**
-     * @param  array{activity_type_id: int, location: string, notes: ?string, product_ids: list<int>}  $data
+     * @param  array{idempotency_key: string, activity_type_id: int, location: string, notes: ?string, product_ids: list<int>}  $data
      */
     private function realizeManually(User $creator, array $data): Activity
     {
@@ -71,6 +84,7 @@ class CreateActivityUseCase
             $activity = Activity::create([
                 'activity_plan_id' => null,
                 'creator_id' => $creator->id,
+                'idempotency_key' => $data['idempotency_key'],
                 'activity_type_id' => $data['activity_type_id'],
                 'location' => $data['location'],
                 'notes' => $data['notes'] ?? null,

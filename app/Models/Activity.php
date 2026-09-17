@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Activities\Domain\Enums\ActivityStatus;
 
-#[Fillable(['activity_plan_id', 'creator_id', 'activity_type_id', 'location', 'notes', 'status'])]
+#[Fillable(['activity_plan_id', 'creator_id', 'idempotency_key', 'activity_type_id', 'location', 'notes', 'status'])]
 class Activity extends Model
 {
     use HasFactory;

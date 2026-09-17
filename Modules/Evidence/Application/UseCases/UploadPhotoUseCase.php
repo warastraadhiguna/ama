@@ -21,8 +21,9 @@ class UploadPhotoUseCase
 
     /**
      * @param  array{capture_session_uuid: string, started_at: string, latitude: float, longitude: float, accuracy: float, captured_at_device: string}  $data
+     * @return array{photo: ActivityPhoto, created: bool}
      */
-    public function handle(Activity $activity, User $user, ?string $deviceTokenName, UploadedFile $file, array $data): ActivityPhoto
+    public function handle(Activity $activity, User $user, ?string $deviceTokenName, UploadedFile $file, array $data): array
     {
         ($this->ensureActivityIsEditable)($activity);
 
@@ -35,11 +36,24 @@ class UploadPhotoUseCase
 
         $contents = $file->get();
         $hash = hash('sha256', $contents);
+
+        // docs section 22: retry-safe, "no duplicate photo upload" — the
+        // same bytes reuploaded into the same session is the same evidence,
+        // so it's returned as-is instead of storing (and paying for) a
+        // second identical object.
+        $existing = ActivityPhoto::where('capture_session_id', $session->id)
+            ->where('sha256_hash', $hash)
+            ->first();
+
+        if ($existing) {
+            return ['photo' => $existing, 'created' => false];
+        }
+
         $path = sprintf('activities/%d/photos/%s.%s', $activity->id, (string) Str::uuid(), $file->extension() ?: 'jpg');
 
         Storage::put($path, $contents);
 
-        return ActivityPhoto::create([
+        $photo = ActivityPhoto::create([
             'activity_id' => $activity->id,
             'capture_session_id' => $session->id,
             'device_id' => $device?->id,
@@ -55,5 +69,7 @@ class UploadPhotoUseCase
             'storage_path' => $path,
             'integrity_status' => 'PENDING',
         ]);
+
+        return ['photo' => $photo, 'created' => true];
     }
 }
