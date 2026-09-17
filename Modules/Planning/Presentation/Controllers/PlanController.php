@@ -63,7 +63,7 @@ class PlanController extends Controller
         $plan = $this->findOwnPlan($request, $id);
 
         try {
-            $plan = $useCase->handle($plan, $request->validated());
+            $plan = $useCase->handle($plan, $request->validated(), $request->user());
         } catch (PlanNotEditableException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (InvalidPlanStatusTransitionException $e) {

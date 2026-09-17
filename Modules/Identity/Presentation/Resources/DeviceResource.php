@@ -25,6 +25,11 @@ class DeviceResource extends JsonResource
             'model' => $this->model,
             'integrity_status' => $this->integrity_status,
             'last_active_at' => $this->last_active_at?->toIso8601String(),
+            'revoked_at' => $this->revoked_at?->toIso8601String(),
+            'user' => $this->whenLoaded('user', fn () => [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+            ]),
         ];
     }
 }

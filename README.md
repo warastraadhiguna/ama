@@ -195,3 +195,24 @@ Deliberately not built: a Web Admin UI for notifications or reports. Docs sectio
 **Removed Laravel's built-in `Notifiable` trait from `User`.** It shipped unused on the model (Laravel's skeleton default) but its own `notifications()` method and its polymorphic `notifiable_type`/`notifiable_id` "notifications" table convention would have collided with this app's own `user_id`-based `notifications` table and `User::notifications()` relation — caught before it shipped as a bug, not after.
 
 **Infra note for local dev:** OPcache is tuned in `docker/php/opcache-dev.ini` because the bind-mounted source (Windows host → WSL2 → container) makes per-file `mtime` stats slow enough to turn every request into a ~12s page load otherwise. First tried disabling revalidation entirely (`validate_timestamps=0`) — immediately regretted it: a `bootstrap/providers.php` edit (registering this milestone's new providers) silently kept running the old cached version until the container was restarted, which is a worse failure mode than the slow requests it fixed. Settled on `revalidate_freq=15` instead — same fast requests, but a code edit is picked up on the next request after at most ~15s, same as stock PHP just less eager about re-checking.
+
+### Hardening (Milestone K)
+
+Adds `Modules/Audit/` (docs section 30: "Sistem wajib memiliki audit log untuk aksi penting") — a plain injectable `AuditLogger`, not a full module layer, since every call site just records one row. Wired into the write paths where an admin/operator action changes something on someone else's behalf or reshapes shared reference data, per section 30's own example (an *edit*, not every creation of routine field data):
+
+- All 5 Master Data resources' create/update/delete (`SimpleMasterDataController` — one wiring point covers Activity Types/Product Categories/Positions/Work Locations/Products, since Products inherits store/update/destroy from it).
+- Plan updates, including status transitions (matches section 30's own "Old location = A, New location = B" example).
+- Device revocation (see below).
+
+**Completed a half-built security feature.** Milestone B built the *data* for device revocation (`devices.revoked_at`, and every check against it — login, evidence submission, re-registration all already refused a revoked device) but never exposed the actual admin action to set it (docs section 24: "Admin dapat melakukan revoke device"). Added:
+
+```
+GET  /api/v1/admin/devices           ?user_id=   (users.manage)
+POST /api/v1/admin/devices/{id}/revoke            (users.manage)
+```
+
+**Rate limiting** (docs section 36: "Rate limit endpoint sensitif") on `POST /api/v1/auth/login` and `/auth/refresh` — 10 requests/minute, the obvious brute-force targets in the API.
+
+**`DEPLOYMENT.md`**: the Ubuntu + native-nginx production deployment guide promised earlier in this project (Docker was always a local-dev choice, never an architectural requirement) — install steps, an nginx vhost (the same shape as `docker/nginx/default.conf` minus the Docker-DNS-resolver workaround, which doesn't apply outside Docker), systemd units for the queue worker, and cron for the scheduler.
+
+Verified: full test suite (80 passing: 8 new Audit/device-revocation cases) and Pint pass; manually created master data and confirmed the resulting `audit_logs` row against the real Postgres-backed stack, and confirmed rate limiting kicks in (`429`) after repeated failed logins.

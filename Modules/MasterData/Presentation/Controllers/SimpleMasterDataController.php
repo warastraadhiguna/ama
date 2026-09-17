@@ -7,17 +7,21 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
+use Modules\Audit\Application\AuditLogger;
 
 /**
  * Shared CRUD for the master-data lookups that are all shaped the same way
  * (name, unique code, is_active): activity types, product categories,
  * positions, work locations. Products is the only master-data resource with
- * a real relationship (a category), so it gets its own controller.
+ * a real relationship (a category), so it gets its own controller — it
+ * still inherits store/update/destroy (and their audit logging) from here.
  */
 abstract class SimpleMasterDataController extends Controller
 {
     /** @var class-string<Model> */
     protected string $model;
+
+    public function __construct(protected readonly AuditLogger $auditLogger) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -41,6 +45,8 @@ abstract class SimpleMasterDataController extends Controller
 
         $record = ($this->model)::create($data);
 
+        $this->auditLogger->log($request->user(), 'created', $this->model, $record->id, newValues: $data);
+
         return response()->json(['data' => $record], 201);
     }
 
@@ -50,15 +56,23 @@ abstract class SimpleMasterDataController extends Controller
         $record = ($this->model)::findOrFail($id);
 
         $data = $request->validate($this->rules($record->id));
+        $oldValues = $record->only(array_keys($data));
 
         $record->update($data);
+
+        $this->auditLogger->log($request->user(), 'updated', $this->model, $record->id, $oldValues, $data);
 
         return response()->json(['data' => $record]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        ($this->model)::findOrFail($id)->delete();
+        /** @var Model $record */
+        $record = ($this->model)::findOrFail($id);
+        $oldValues = $record->getAttributes();
+        $record->delete();
+
+        $this->auditLogger->log($request->user(), 'deleted', $this->model, $id, oldValues: $oldValues);
 
         return response()->json(status: 204);
     }

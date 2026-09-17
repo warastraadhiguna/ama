@@ -141,4 +141,18 @@ class AuthTest extends TestCase
         $tokenId = explode('|', $login['access_token'])[0];
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $tokenId]);
     }
+
+    /**
+     * docs section 36: "Rate limit endpoint sensitif" — login is the most
+     * obvious brute-force target in the API.
+     */
+    public function test_login_is_rate_limited(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/v1/auth/login', ['email' => 'nobody@ama.test', 'password' => 'wrong']);
+        }
+
+        $this->postJson('/api/v1/auth/login', ['email' => 'nobody@ama.test', 'password' => 'wrong'])
+            ->assertStatus(429);
+    }
 }
