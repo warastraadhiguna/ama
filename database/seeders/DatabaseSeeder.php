@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(RolesAndPermissionsSeeder::class);
+        $this->call(MasterDataSeeder::class);
 
         $agronomistPosition = Position::firstOrCreate(
             ['code' => 'AGRONOMIST'],
@@ -29,25 +30,33 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Bojonegoro'],
         );
 
-        $admin = User::factory()->create([
-            'name' => 'AMA Super Admin',
-            'nip' => 'ADM-0001',
-            'email' => 'admin@ama.test',
-            'password' => bcrypt('password'),
-            'is_active' => true,
-        ]);
-        $admin->assignRole('SUPER_ADMIN');
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@ama.test'],
+            [
+                'name' => 'AMA Super Admin',
+                'nip' => 'ADM-0001',
+                'password' => bcrypt('password'),
+                'is_active' => true,
+            ],
+        );
+        if (! $admin->hasRole('SUPER_ADMIN')) {
+            $admin->assignRole('SUPER_ADMIN');
+        }
 
-        $agronomist = User::factory()->create([
-            'name' => 'Test Agronomist',
-            'nip' => 'AGR-0001',
-            'email' => 'agronomist@ama.test',
-            'phone' => '085815759516',
-            'position_id' => $agronomistPosition->id,
-            'work_location_id' => $bojonegoro->id,
-            'password' => bcrypt('password'),
-            'is_active' => true,
-        ]);
-        $agronomist->assignRole('AGRONOMIST');
+        $agronomist = User::firstOrCreate(
+            ['email' => 'agronomist@ama.test'],
+            [
+                'name' => 'Test Agronomist',
+                'nip' => 'AGR-0001',
+                'phone' => '085815759516',
+                'position_id' => $agronomistPosition->id,
+                'work_location_id' => $bojonegoro->id,
+                'password' => bcrypt('password'),
+                'is_active' => true,
+            ],
+        );
+        if (! $agronomist->hasRole('AGRONOMIST')) {
+            $agronomist->assignRole('AGRONOMIST');
+        }
     }
 }

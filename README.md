@@ -67,3 +67,19 @@ Implementation defaults not specified by the baseline doc (tune in `config/ident
 - Access token TTL: 60 minutes. Refresh token TTL: 30 days, single-use (rotated on every `/auth/refresh` call).
 - A `device_uuid` is bound to the account that first registers it; a revoked device, or a UUID reused under a different account, is rejected (`403 DEVICE_REVOKED`) at both login and `/devices/register`.
 - Positions and Work Locations got minimal tables here (`users` needs the FK) — full Master Data CRUD/API for them is Milestone C.
+
+### Master Data (Milestone C)
+
+Activity Types, Product Categories, Products, Positions, Work Locations — server-owned lookups the Android app caches for offline use (docs section 27). Reads are open to any authenticated user (mobile sync); writes require the `master_data.manage` permission (ADMIN/SUPER_ADMIN).
+
+```
+GET    /api/v1/master/{activity-types|product-categories|products|positions|work-locations}
+GET    /api/v1/master/{resource}/{id}
+POST   /api/v1/master/{resource}                 (master_data.manage)
+PUT    /api/v1/master/{resource}/{id}             (master_data.manage)
+DELETE /api/v1/master/{resource}/{id}             (master_data.manage)
+```
+
+`products` additionally accepts `?product_category_id=` to drive the dependent Kategori Produk -> Produk/Varietas dropdown (docs section 16) and returns the `category` relation inline. Seeded with the starter lists from docs sections 15-16 (7 activity types; BEKA/POMMIX/POMI under their categories).
+
+Activity Types, Product Categories, Positions, and Work Locations are all shaped identically (name/code/is_active), so they share one generic `SimpleMasterDataController` rather than four near-duplicate CRUD implementations; Products gets its own controller for the category relation/filter.
