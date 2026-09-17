@@ -14,7 +14,7 @@ class RegisterDeviceUseCase
     ) {}
 
     /**
-     * @param  array{app_version: string, os_version: ?string, manufacturer: ?string, model: ?string}  $attributes
+     * @param  array{app_version: string, os_version: ?string, manufacturer: ?string, model: ?string, fcm_token: ?string}  $attributes
      */
     public function handle(User $user, string $deviceUuid, array $attributes): Device
     {

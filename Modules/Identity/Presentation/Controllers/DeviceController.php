@@ -22,6 +22,7 @@ class DeviceController extends Controller
                     'os_version' => $request->string('os_version')->toString() ?: null,
                     'manufacturer' => $request->string('manufacturer')->toString() ?: null,
                     'model' => $request->string('model')->toString() ?: null,
+                    'fcm_token' => $request->string('fcm_token')->toString() ?: null,
                 ],
             );
         } catch (DeviceRevokedException $e) {

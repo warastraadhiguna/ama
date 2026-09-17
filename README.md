@@ -174,3 +174,24 @@ GET  /activities/{id}                          — evidence viewer + integrity r
 **MinIO photo URLs needed a second disk.** Evidence photos are stored via the app container's Docker-internal view of MinIO (`AWS_ENDPOINT=http://minio:9000`), but a presigned URL opened in the admin's own browser can't resolve that hostname. Added `s3_public` in `config/filesystems.php` — same bucket/credentials, but `AWS_ENDPOINT_PUBLIC` (defaults to `http://localhost:9000`, MinIO's published port) instead. Used only for `Storage::disk('s3_public')->temporaryUrl(...)` in the evidence viewer. In staging/production this collapses to a no-op (`AWS_ENDPOINT_PUBLIC` = `AWS_ENDPOINT`, both the real public S3/R2 endpoint).
 
 Verified with a real headless-browser pass (login → dashboard → activities list with map markers → an activity's evidence viewer, confirming a MinIO-stored photo actually renders via the presigned URL → logout), not just `php artisan test` — this is the repo's first UI, and a green test suite doesn't catch a blank screen or a broken image. Caught and fixed one bug this way that the test suite's `actingAs()`-based tests didn't (they don't exercise real seeded roles): the agronomist filter dropdown queried `User::role('AGRONOMIST')`, which throws instead of returning empty when that role doesn't exist yet in a given environment.
+
+### Notifications & Reports (Milestone J)
+
+**FCM push is honestly not functional yet — same pattern as Play Integrity (Milestone G).** `Modules/Notifications/` saves every notification to the database regardless (docs section 28: "disimpan dalam database agar notification center tetap memiliki history") and the API/triggers all work — only the actual push is a placeholder. `NullPushNotifier` logs what it would have sent and returns `false`, rather than faking success. Needs a Firebase project with Cloud Messaging enabled (+ a service account) before it can do anything real, which in turn needs `ama-android` to exist to register genuine `fcm_token`s — ask before assuming this is wired up.
+
+```
+GET  /api/v1/notifications              — own notifications, paginated
+POST /api/v1/notifications/{id}/read
+GET  /api/v1/reports/activities/summary — activities/plans counts, realization rate, integrity breakdown (reports.view)
+GET  /api/v1/reports/activities/export  — CSV (docs section 44 Q14: format unresolved; CSV opens in Excel without picking/installing a PDF or xlsx-specific library before the actual desired format is confirmed)
+```
+
+Automatic triggers (docs section 28's examples), all best-effort — a failed/unconfigured push never fails the triggering action:
+- `notifications:plan-reminders` (scheduled daily at 06:00, `routes/console.php`): `PLAN_TOMORROW`/`PLAN_TODAY`/`PLAN_OVERDUE`, each plan reminded at most once per type (a rerun or a caught-up missed day doesn't spam it again).
+- Completing an activity (Evidence module): `ACTIVITY_COMPLETED` to its creator; `ACTIVITY_NEEDS_REVIEW` to every `activities.verify` holder if any of its locations came out of Milestone G's evaluation as anything other than `TRUSTED`.
+
+Deliberately not built: a Web Admin UI for notifications or reports. Docs section 29 describes both as Web Admin features, but neither is in section 48's Milestone J description (just "FCM; notification center; reports" — read as the data/API layer, the same way "notification center" reads as Android's own notification inbox, not a Web Admin screen), and Milestone I was scoped the same way for User Management/Master Data. The APIs above are ready for either a future Web Admin page or the Android app to consume.
+
+**Removed Laravel's built-in `Notifiable` trait from `User`.** It shipped unused on the model (Laravel's skeleton default) but its own `notifications()` method and its polymorphic `notifiable_type`/`notifiable_id` "notifications" table convention would have collided with this app's own `user_id`-based `notifications` table and `User::notifications()` relation — caught before it shipped as a bug, not after.
+
+**Infra note for local dev:** OPcache is tuned in `docker/php/opcache-dev.ini` because the bind-mounted source (Windows host → WSL2 → container) makes per-file `mtime` stats slow enough to turn every request into a ~12s page load otherwise. First tried disabling revalidation entirely (`validate_timestamps=0`) — immediately regretted it: a `bootstrap/providers.php` edit (registering this milestone's new providers) silently kept running the old cached version until the container was restarted, which is a worse failure mode than the slow requests it fixed. Settled on `revalidate_freq=15` instead — same fast requests, but a code edit is picked up on the next request after at most ~15s, same as stock PHP just less eager about re-checking.

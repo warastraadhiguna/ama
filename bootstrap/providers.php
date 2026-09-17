@@ -6,7 +6,9 @@ use Modules\Evidence\Providers\EvidenceServiceProvider;
 use Modules\Identity\Providers\IdentityServiceProvider;
 use Modules\Integrity\Providers\IntegrityServiceProvider;
 use Modules\MasterData\Providers\MasterDataServiceProvider;
+use Modules\Notifications\Providers\NotificationsServiceProvider;
 use Modules\Planning\Providers\PlanningServiceProvider;
+use Modules\Reports\Providers\ReportsServiceProvider;
 use Modules\WebAdmin\Providers\WebAdminServiceProvider;
 
 return [
@@ -18,4 +20,6 @@ return [
     EvidenceServiceProvider::class,
     IntegrityServiceProvider::class,
     WebAdminServiceProvider::class,
+    NotificationsServiceProvider::class,
+    ReportsServiceProvider::class,
 ];

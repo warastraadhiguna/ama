@@ -8,12 +8,14 @@ use Modules\Activities\Domain\Enums\ActivityStatus;
 use Modules\Evidence\Domain\Exceptions\EvidenceIncompleteException;
 use Modules\Evidence\Domain\Rules\EnsureActivityIsEditable;
 use Modules\Integrity\Application\UseCases\EvaluateCaptureSessionWindowUseCase;
+use Modules\Notifications\Application\UseCases\NotifyActivityCompletedUseCase;
 
 class CompleteActivityUseCase
 {
     public function __construct(
         private readonly EnsureActivityIsEditable $ensureActivityIsEditable,
         private readonly EvaluateCaptureSessionWindowUseCase $evaluateCaptureSessionWindow,
+        private readonly NotifyActivityCompletedUseCase $notifyActivityCompleted,
     ) {}
 
     public function handle(Activity $activity): Activity
@@ -29,7 +31,7 @@ class CompleteActivityUseCase
             throw new EvidenceIncompleteException;
         }
 
-        return DB::transaction(function () use ($activity, $completeSessions) {
+        $activity = DB::transaction(function () use ($activity, $completeSessions) {
             foreach ($completeSessions as $session) {
                 $this->evaluateCaptureSessionWindow->handle($session);
             }
@@ -39,5 +41,11 @@ class CompleteActivityUseCase
 
             return $activity->fresh(['activityType', 'products', 'creator', 'captureSessions.locations', 'captureSessions.photos']);
         });
+
+        // Outside the transaction: a rolled-back completion should never
+        // have notified anyone.
+        $this->notifyActivityCompleted->handle($activity);
+
+        return $activity;
     }
 }
