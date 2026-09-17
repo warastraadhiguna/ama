@@ -59,6 +59,7 @@ class EvidenceTest extends TestCase
                 'latitude' => -7.150975,
                 'longitude' => 111.880566,
                 'accuracy' => 8.5,
+                'is_mock_location' => false,
                 'captured_at_device' => now()->toIso8601String(),
             ])
             ->assertStatus(201);
@@ -76,6 +77,7 @@ class EvidenceTest extends TestCase
             'latitude' => -7.150975,
             'longitude' => 111.880566,
             'accuracy' => 8.5,
+            'is_mock_location' => false,
             'captured_at_device' => now()->toIso8601String(),
         ]);
 
@@ -97,6 +99,7 @@ class EvidenceTest extends TestCase
             'latitude' => -7.15,
             'longitude' => 111.88,
             'accuracy' => 8.5,
+            'is_mock_location' => false,
             'captured_at_device' => now()->toIso8601String(),
         ])->assertStatus(403);
     }
@@ -112,6 +115,7 @@ class EvidenceTest extends TestCase
             'latitude' => -7.15,
             'longitude' => 111.88,
             'accuracy' => 8.5,
+            'is_mock_location' => false,
             'captured_at_device' => now()->toIso8601String(),
         ])->assertStatus(422);
     }

@@ -12,6 +12,7 @@ use Modules\Evidence\Application\UseCases\SubmitLocationUseCase;
 use Modules\Evidence\Application\UseCases\UploadPhotoUseCase;
 use Modules\Evidence\Domain\Exceptions\ActivityNotEditableException;
 use Modules\Evidence\Domain\Exceptions\EvidenceIncompleteException;
+use Modules\Evidence\Domain\Exceptions\LocationRejectedException;
 use Modules\Evidence\Presentation\Requests\SubmitLocationRequest;
 use Modules\Evidence\Presentation\Requests\UploadPhotoRequest;
 
@@ -25,6 +26,8 @@ class EvidenceController extends Controller
             $location = $useCase->handle($activity, $request->user(), $this->currentDeviceTokenName($request), $request->validated());
         } catch (ActivityNotEditableException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (LocationRejectedException $e) {
+            return response()->json(['message' => $e->getMessage(), 'reasons' => $e->reasons], 403);
         }
 
         return response()->json(['data' => [
@@ -33,6 +36,7 @@ class EvidenceController extends Controller
             'latitude' => $location->latitude,
             'longitude' => $location->longitude,
             'accuracy' => $location->accuracy,
+            'integrity_status' => $location->integrity_status,
         ]], 201);
     }
 
