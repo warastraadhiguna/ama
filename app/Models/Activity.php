@@ -7,19 +7,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Modules\Planning\Domain\Enums\PlanStatus;
+use Modules\Activities\Domain\Enums\ActivityStatus;
 
-#[Fillable(['creator_id', 'activity_type_id', 'location', 'planned_date', 'notes', 'status', 'realized_activity_id'])]
-class ActivityPlan extends Model
+#[Fillable(['activity_plan_id', 'creator_id', 'activity_type_id', 'location', 'notes', 'status'])]
+class Activity extends Model
 {
     use HasFactory;
 
     protected function casts(): array
     {
         return [
-            'planned_date' => 'date',
-            'status' => PlanStatus::class,
+            'status' => ActivityStatus::class,
         ];
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(ActivityPlan::class, 'activity_plan_id');
     }
 
     public function creator(): BelongsTo
@@ -34,11 +38,6 @@ class ActivityPlan extends Model
 
     public function products(): BelongsToMany
     {
-        return $this->belongsToMany(Product::class, 'activity_plan_products');
-    }
-
-    public function realizedActivity(): BelongsTo
-    {
-        return $this->belongsTo(Activity::class, 'realized_activity_id');
+        return $this->belongsToMany(Product::class, 'activity_products');
     }
 }

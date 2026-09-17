@@ -96,3 +96,22 @@ PUT  /api/v1/plans/{id}       partial update, incl. status                      
 ```
 
 Authorization default (docs section 44 Q9/Q11 are unresolved, so this is a documented assumption, not a confirmed rule): `plans.view` is a monitoring permission (ADMIN/MANAGER/SUPERVISOR/SUPER_ADMIN) — see every plan, read-only. `plans.create` (AGRONOMIST) — manage only the plans you created yourself; no separate "view own" permission is needed for that, so AGRONOMIST intentionally does **not** have `plans.view` (it would widen them to everyone's plans instead of just their own).
+
+### Activity Realization (Milestone E)
+
+Activities (docs section 14) — both realization modes from one endpoint, branching on whether `activity_plan_id` is present:
+
+```
+GET  /api/v1/activities        ?status=   (activities.view sees everyone's; otherwise only your own)
+GET  /api/v1/activities/{id}
+POST /api/v1/activities        (activities.create)
+     Manual (docs 14.2):    { activity_type_id, product_ids: [], location, notes? }
+     From a plan (docs 14.1): { activity_plan_id, location, notes? }  -- activity type & products are
+                                copied from the plan, not re-entered
+```
+
+Realizing a plan (docs section 13.3) atomically: creates the activity, copies the plan's activity type/products onto it, sets the plan's `status` to `REALIZED`, and sets `activity_plans.realized_activity_id` to point at the new activity (a column that could only be added now — it references `activities`, which didn't exist during Milestone D). Only the plan's own creator can realize it, and only from `PLANNED`/`READY` (not already `REALIZED`/`CANCELLED`) — enforced with a row lock (`lockForUpdate`) so two concurrent realize requests can't double-spend the same plan.
+
+New activities always start `DRAFT` (docs section 23's full state machine — `DRAFT/SUBMITTED/SYNCED/VERIFIED/REJECTED` — is modeled as an enum now so the design doesn't need to change later, but only `DRAFT` is reachable from this milestone). Deliberately out of scope here, coming in later milestones:
+- `POST /activities/{id}/location`, `/photos`, `/complete` — Milestone F (Evidence); `/complete` is what moves `DRAFT -> SUBMITTED`.
+- A `/activities/{id}/verify` review action gated by `activities.verify` — docs section 23 says V1 must not *force* approval, but the design should allow adding it, which the status enum already does.
