@@ -60,6 +60,28 @@ return [
             'report' => false,
         ],
 
+        // Same bucket/credentials as 's3', but with a browser-reachable
+        // endpoint — used only for generating temporaryUrl()s for the Web
+        // Admin evidence viewer. In local dev, the app container talks to
+        // MinIO over the Docker-internal hostname (AWS_ENDPOINT=http://
+        // minio:9000), which a presigned URL opened in the developer's own
+        // browser can't resolve; AWS_ENDPOINT_PUBLIC points at the same
+        // MinIO reachable from the host instead. In staging/production
+        // (real S3/R2), both endpoints are the same public DNS name, so
+        // this distinction is a no-op — set AWS_ENDPOINT_PUBLIC = AWS_ENDPOINT.
+        's3_public' => [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET'),
+            'url' => env('AWS_URL'),
+            'endpoint' => env('AWS_ENDPOINT_PUBLIC', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

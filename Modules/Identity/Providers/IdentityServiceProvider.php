@@ -22,5 +22,8 @@ class IdentityServiceProvider extends ServiceProvider
         Route::prefix('api/v1')
             ->middleware('api')
             ->group(__DIR__.'/../Presentation/routes.php');
+
+        Route::middleware('web')
+            ->group(__DIR__.'/../Presentation/routes-web.php');
     }
 }

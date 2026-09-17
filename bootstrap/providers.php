@@ -7,6 +7,7 @@ use Modules\Identity\Providers\IdentityServiceProvider;
 use Modules\Integrity\Providers\IntegrityServiceProvider;
 use Modules\MasterData\Providers\MasterDataServiceProvider;
 use Modules\Planning\Providers\PlanningServiceProvider;
+use Modules\WebAdmin\Providers\WebAdminServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -16,4 +17,5 @@ return [
     ActivitiesServiceProvider::class,
     EvidenceServiceProvider::class,
     IntegrityServiceProvider::class,
+    WebAdminServiceProvider::class,
 ];

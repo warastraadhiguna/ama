@@ -18,9 +18,11 @@ Source of truth for requirements/architecture: [`docs/AMA_SYSTEM_DOCUMENTATION_v
 docker compose up -d --build
 docker compose exec app php artisan migrate
 docker compose exec app php artisan db:seed
+npm install
+npm run build   # or `npm run dev` for the Vite dev server with hot reload
 ```
 
-The seeder creates two dev accounts (password `password` for both):
+Web Admin is at http://localhost:8000 (login page). The seeder creates two dev accounts (password `password` for both):
 
 | Email | Role |
 |-------|------|
@@ -155,3 +157,20 @@ Room and WorkManager (docs section 21's local-first flow) are Android's job and 
 
 - `POST /plans` and `POST /activities` now require `idempotency_key` (client-generated UUID). A retried request with the same key from the same creator returns the original record (`200`) instead of creating a new one (`201` the first time).
 - `POST /activities/{id}/photos` dedupes by `(capture_session_id, sha256_hash)` — reuploading the identical bytes into the same session returns the existing photo (`200`) without writing a second object to storage.
+
+### Web Admin / Web Monitoring (Milestone I)
+
+First frontend work in this repo: Inertia.js + React + Tailwind, session-based auth (docs section 25.2), scoped to exactly what docs section 48 names for this milestone — activity list, map, evidence viewer, integrity review. (User Management and Master Data CRUD UI aren't in section 48's milestone list at all despite section 29 describing them; the backend APIs already exist from Milestones B/C — their UI isn't built yet and isn't implied by "Web Monitoring".)
+
+```
+GET  /login, POST /login, POST /logout        — session auth (Modules/Identity/.../WebAuthController)
+GET  /dashboard                                — today's summary (docs section 29.1)
+GET  /activities                               — filterable list + Leaflet/OpenStreetMap markers (docs section 29.4/29.5)
+GET  /activities/{id}                          — evidence viewer + integrity review (photos, GPS, anomaly_reasons)
+```
+
+`/dashboard` and `/activities*` require the `activities.view` permission — same monitoring roles as the API (ADMIN/MANAGER/SUPERVISOR/SUPER_ADMIN); AGRONOMIST isn't meant to use Web Admin. Any active user can reach `/login` itself.
+
+**MinIO photo URLs needed a second disk.** Evidence photos are stored via the app container's Docker-internal view of MinIO (`AWS_ENDPOINT=http://minio:9000`), but a presigned URL opened in the admin's own browser can't resolve that hostname. Added `s3_public` in `config/filesystems.php` — same bucket/credentials, but `AWS_ENDPOINT_PUBLIC` (defaults to `http://localhost:9000`, MinIO's published port) instead. Used only for `Storage::disk('s3_public')->temporaryUrl(...)` in the evidence viewer. In staging/production this collapses to a no-op (`AWS_ENDPOINT_PUBLIC` = `AWS_ENDPOINT`, both the real public S3/R2 endpoint).
+
+Verified with a real headless-browser pass (login → dashboard → activities list with map markers → an activity's evidence viewer, confirming a MinIO-stored photo actually renders via the presigned URL → logout), not just `php artisan test` — this is the repo's first UI, and a green test suite doesn't catch a blank screen or a broken image. Caught and fixed one bug this way that the test suite's `actingAs()`-based tests didn't (they don't exercise real seeded roles): the agronomist filter dropdown queried `User::role('AGRONOMIST')`, which throws instead of returning empty when that role doesn't exist yet in a given environment.
