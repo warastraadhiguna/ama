@@ -175,6 +175,26 @@ GET  /activities/{id}                          — evidence viewer + integrity r
 
 Verified with a real headless-browser pass (login → dashboard → activities list with map markers → an activity's evidence viewer, confirming a MinIO-stored photo actually renders via the presigned URL → logout), not just `php artisan test` — this is the repo's first UI, and a green test suite doesn't catch a blank screen or a broken image. Caught and fixed one bug this way that the test suite's `actingAs()`-based tests didn't (they don't exercise real seeded roles): the agronomist filter dropdown queried `User::role('AGRONOMIST')`, which throws instead of returning empty when that role doesn't exist yet in a given environment.
 
+### Web Admin: User Management (doc schedule "Part 12")
+
+Until now the only way to create an account was the seeder. `/users` (docs section 29.2) adds list + search, create, edit, activate/deactivate and per-user device revoke, gated by `users.manage` (ADMIN/SUPER_ADMIN); the nav link only shows for holders of that permission.
+
+```
+GET  /users, /users/create, /users/{id}/edit
+POST /users, PUT /users/{id}
+POST /users/{id}/devices/{deviceId}/revoke
+```
+
+Rules worth knowing (all covered in `tests/Feature/Identity/WebUserManagementTest.php`):
+- Users are never deleted, only deactivated — activities, plans and audit rows reference them. Deactivating also deletes their Sanctum tokens and revokes their refresh tokens, so a phone that is already logged in stops working immediately rather than at token expiry.
+- Only a SUPER_ADMIN can assign or edit SUPER_ADMIN (an ADMIN could otherwise promote themselves past their own role).
+- Nobody can deactivate or change the role of their own account from this screen.
+- Create/update are written to `audit_logs`; the password never appears in the old/new values. Leaving the password blank on edit keeps the current one.
+
+Verified in a headless browser against the real stack (create → search → edit → deactivate, no console errors, DB and audit rows checked), plus 9 feature tests; full suite 89/89 green.
+
+**Still not built in Web Admin** (docs section 29): Master Data CRUD screens (API exists), a Reports screen (API + CSV export exist), dashboard filters, a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+
 ### Notifications & Reports (Milestone J)
 
 **FCM push is honestly not functional yet — same pattern as Play Integrity (Milestone G).** `Modules/Notifications/` saves every notification to the database regardless (docs section 28: "disimpan dalam database agar notification center tetap memiliki history") and the API/triggers all work — only the actual push is a placeholder. `NullPushNotifier` logs what it would have sent and returns `false`, rather than faking success. Needs a Firebase project with Cloud Messaging enabled (+ a service account) before it can do anything real, which in turn needs `ama-android` to exist to register genuine `fcm_token`s — ask before assuming this is wired up.

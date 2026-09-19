@@ -3,10 +3,14 @@ import { Link, usePage, router } from '@inertiajs/react';
 const NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/activities', label: 'Aktivitas' },
+    { href: '/users', label: 'Pengguna', permission: 'users.manage' },
 ];
 
 export default function AdminLayout({ children }) {
     const { auth, flash } = usePage().props;
+    const visibleNav = NAV_ITEMS.filter(
+        (item) => !item.permission || auth.user?.permissions?.includes(item.permission),
+    );
 
     function logout(e) {
         e.preventDefault();
@@ -20,7 +24,7 @@ export default function AdminLayout({ children }) {
                     <div className="flex items-center gap-8">
                         <span className="text-sm font-semibold text-green-800">AMA Web Admin</span>
                         <nav className="flex gap-4 text-sm">
-                            {NAV_ITEMS.map((item) => (
+                            {visibleNav.map((item) => (
                                 <Link
                                     key={item.href}
                                     href={item.href}
