@@ -37,6 +37,12 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::findOrCreate($permission);
         }
 
+        // DatabaseSeeder runs this under WithoutModelEvents, so creating the
+        // permissions above did not flush spatie's cache; it still holds the
+        // empty list read a moment ago and syncPermissions() below would throw
+        // PermissionDoesNotExist on a fresh database (i.e. a first install).
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $rolePermissions = [
             'SUPER_ADMIN' => $permissions,
             'ADMIN' => [

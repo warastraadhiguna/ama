@@ -42,6 +42,8 @@ npm ci
 npm run build
 php artisan key:generate
 php artisan migrate --force
+php artisan db:seed --force              # roles, permissions and starter master data only — no test accounts outside local/testing
+php artisan ama:create-admin you@company.com --name="Your Name"   # prompts for the password; the first login
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

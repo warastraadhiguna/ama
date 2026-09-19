@@ -8,6 +8,7 @@ use Modules\Identity\Domain\Repositories\DeviceRepositoryInterface;
 use Modules\Identity\Domain\Repositories\RefreshTokenRepositoryInterface;
 use Modules\Identity\Infrastructure\Persistence\EloquentDeviceRepository;
 use Modules\Identity\Infrastructure\Persistence\EloquentRefreshTokenRepository;
+use Modules\Identity\Presentation\Commands\CreateAdmin;
 
 class IdentityServiceProvider extends ServiceProvider
 {
@@ -25,5 +26,9 @@ class IdentityServiceProvider extends ServiceProvider
 
         Route::middleware('web')
             ->group(__DIR__.'/../Presentation/routes-web.php');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([CreateAdmin::class]);
+        }
     }
 }

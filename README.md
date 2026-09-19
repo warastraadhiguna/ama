@@ -22,7 +22,7 @@ npm install
 npm run build   # or `npm run dev` for the Vite dev server with hot reload
 ```
 
-Web Admin is at http://localhost:8000 (login page). The seeder creates two dev accounts (password `password` for both):
+Web Admin is at http://localhost:8000 (login page). In `local`/`testing` only, the seeder creates two dev accounts (password `password` for both). On any other environment it creates none — make the first admin with `php artisan ama:create-admin <email>` (see DEPLOYMENT.md):
 
 | Email | Role |
 |-------|------|

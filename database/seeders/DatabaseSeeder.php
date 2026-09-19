@@ -20,6 +20,16 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(MasterDataSeeder::class);
 
+        // Everything below creates accounts with the well-known password
+        // "password". That is fine for a laptop and a disaster on a real
+        // server, so it is limited to local/testing. On any other
+        // environment create the first admin with `php artisan ama:create-admin`.
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command?->warn('Skipped dev accounts (not local/testing). Create an admin with: php artisan ama:create-admin <email>');
+
+            return;
+        }
+
         $agronomistPosition = Position::firstOrCreate(
             ['code' => 'AGRONOMIST'],
             ['name' => 'Agronomist'],
