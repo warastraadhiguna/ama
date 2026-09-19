@@ -4,6 +4,7 @@ const NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/activities', label: 'Aktivitas' },
     { href: '/reports', label: 'Laporan', permission: 'reports.view' },
+    { href: '/master-data', label: 'Master Data', permission: 'master_data.manage' },
     { href: '/users', label: 'Pengguna', permission: 'users.manage' },
 ];
 

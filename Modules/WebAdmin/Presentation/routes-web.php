@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\WebAdmin\Presentation\Controllers\ActivityMonitoringController;
 use Modules\WebAdmin\Presentation\Controllers\DashboardController;
+use Modules\WebAdmin\Presentation\Controllers\MasterDataPageController;
 use Modules\WebAdmin\Presentation\Controllers\ReportPageController;
 
 // activities.view: the monitoring permission (ADMIN/MANAGER/SUPERVISOR/
@@ -13,6 +14,14 @@ Route::middleware(['auth', 'permission:activities.view'])->group(function (): vo
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('activities', [ActivityMonitoringController::class, 'index'])->name('web.activities.index');
     Route::get('activities/{id}', [ActivityMonitoringController::class, 'show'])->name('web.activities.show');
+});
+
+// docs section 29.3 — same permission as the master-data write API.
+Route::middleware(['auth', 'permission:master_data.manage'])->prefix('master-data')->group(function (): void {
+    Route::get('/', fn () => redirect('/master-data/activity-types'));
+    Route::get('{resource}', [MasterDataPageController::class, 'index'])->name('web.master-data.index');
+    Route::post('{resource}', [MasterDataPageController::class, 'store'])->name('web.master-data.store');
+    Route::put('{resource}/{id}', [MasterDataPageController::class, 'update'])->whereNumber('id')->name('web.master-data.update');
 });
 
 // docs section 29.6 — same permission as the reports API.

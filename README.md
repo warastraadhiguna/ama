@@ -193,7 +193,13 @@ Rules worth knowing (all covered in `tests/Feature/Identity/WebUserManagementTes
 
 Verified in a headless browser against the real stack (create → search → edit → deactivate, no console errors, DB and audit rows checked), plus 9 feature tests; full suite 89/89 green.
 
-**Still not built in Web Admin** (docs section 29): Master Data CRUD screens (API exists), dashboard filters, a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+**Still not built in Web Admin** (docs section 29): dashboard filters, a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+
+### Web Admin: Master Data (doc schedule "Part 12", continued)
+
+`/master-data/{activity-types|product-categories|products|positions|work-locations}` (docs section 29.3, `master_data.manage`): one tabbed page, add and edit rows (name, unique code, active flag; products also pick a category). **No delete on purpose** — rows are referenced by activities, plans and users, and the existing `DELETE /api/v1/master/*` hard-deletes; retire a value by turning Aktif off (mobile only fetches active ones). Every change is audited. Verified in a headless browser (add product, duplicate-code error shown inline, edit, deactivate) plus 5 tests.
+
+Known sharp edge left alone: the existing `DELETE /api/v1/master/*` endpoints still hard-delete and will fail or orphan data for values already in use; nothing in the UI calls them.
 
 ### Web Admin: Reports (doc schedule "Part 12", continued)
 
