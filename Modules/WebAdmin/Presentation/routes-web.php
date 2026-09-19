@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\WebAdmin\Presentation\Controllers\ActivityMonitoringController;
 use Modules\WebAdmin\Presentation\Controllers\DashboardController;
+use Modules\WebAdmin\Presentation\Controllers\ReportPageController;
 
 // activities.view: the monitoring permission (ADMIN/MANAGER/SUPERVISOR/
 // SUPER_ADMIN) — matches who can see everyone's activities via the API
@@ -12,4 +13,10 @@ Route::middleware(['auth', 'permission:activities.view'])->group(function (): vo
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('activities', [ActivityMonitoringController::class, 'index'])->name('web.activities.index');
     Route::get('activities/{id}', [ActivityMonitoringController::class, 'show'])->name('web.activities.show');
+});
+
+// docs section 29.6 — same permission as the reports API.
+Route::middleware(['auth', 'permission:reports.view'])->prefix('reports')->group(function (): void {
+    Route::get('/', [ReportPageController::class, 'index'])->name('web.reports.index');
+    Route::get('export', [ReportPageController::class, 'export'])->name('web.reports.export');
 });

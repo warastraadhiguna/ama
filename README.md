@@ -193,7 +193,17 @@ Rules worth knowing (all covered in `tests/Feature/Identity/WebUserManagementTes
 
 Verified in a headless browser against the real stack (create → search → edit → deactivate, no console errors, DB and audit rows checked), plus 9 feature tests; full suite 89/89 green.
 
-**Still not built in Web Admin** (docs section 29): Master Data CRUD screens (API exists), a Reports screen (API + CSV export exist), dashboard filters, a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+**Still not built in Web Admin** (docs section 29): Master Data CRUD screens (API exists), dashboard filters, a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+
+### Web Admin: Reports (doc schedule "Part 12", continued)
+
+`/reports` (docs section 29.6, `reports.view`): filters by date range / work location / agronomist / activity type / product, summary cards (activities, plans, realized, realization rate with cancelled plans excluded, integrity Verified / Needs Review / Rejected) and a CSV download of the same filtered rows. The filter and aggregation logic moved from `ReportController` into `Modules/Reports/Application/ActivityReport`, so the API and this page share one implementation.
+
+Two fixes that came out of testing this:
+- **The reports API failed whenever a date or creator/type filter was combined with the integrity breakdown** (`created_at` was ambiguous after the join to `activity_locations`); the summary endpoint had never been called with a filter in a test. Columns are now qualified.
+- **CSV formula injection:** `location` is free text typed by field users; a value like `=HYPERLINK(...)` would execute when the export is opened in Excel. Cells starting with `=`, `+`, `-`, `@` (or tab/CR) are now prefixed with a single quote.
+
+Verified in a headless browser (login, Laporan, date filter, CSV download) and by tests.
 
 ### Notifications & Reports (Milestone J)
 

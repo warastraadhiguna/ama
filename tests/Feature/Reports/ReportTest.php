@@ -65,6 +65,31 @@ class ReportTest extends TestCase
         $response->assertOk()->assertJsonPath('data.activities_total', 1);
     }
 
+    public function test_csv_neutralizes_formula_injection_from_free_text(): void
+    {
+        $admin = $this->admin();
+        Activity::factory()->create(['location' => '=HYPERLINK("http://evil.test","x")']);
+
+        $csv = $this->actingAs($admin, 'sanctum')->get('/api/v1/reports/activities/export')->getContent();
+
+        $this->assertStringContainsString('"\'=HYPERLINK(', $csv);
+        $this->assertStringNotContainsString(',"=HYPERLINK(', $csv);
+    }
+
+    public function test_the_web_report_page_and_csv_need_reports_view(): void
+    {
+        $admin = $this->admin();
+        Activity::factory()->create();
+
+        $this->actingAs(User::factory()->create())->get('/reports')->assertForbidden();
+        $this->actingAs(User::factory()->create())->get('/reports/export')->assertForbidden();
+
+        $this->actingAs($admin)->get('/reports?date_from=2000-01-01')->assertOk();
+        $this->actingAs($admin)->get('/reports/export')
+            ->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="activities-report.csv"');
+    }
+
     public function test_export_returns_a_csv_file(): void
     {
         $admin = $this->admin();
