@@ -30,6 +30,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'activities.create',
             'activities.verify',
             'reports.view',
+            'announcements.send',
         ];
 
         foreach ($permissions as $permission) {
@@ -40,7 +41,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'SUPER_ADMIN' => $permissions,
             'ADMIN' => [
                 'users.manage', 'master_data.manage', 'plans.view',
-                'activities.view', 'activities.verify', 'reports.view',
+                'activities.view', 'activities.verify', 'reports.view', 'announcements.send',
             ],
             'MANAGER' => ['plans.view', 'activities.view', 'reports.view'],
             'SUPERVISOR' => ['plans.view', 'activities.view', 'activities.verify', 'reports.view'],

@@ -193,7 +193,11 @@ Rules worth knowing (all covered in `tests/Feature/Identity/WebUserManagementTes
 
 Verified in a headless browser against the real stack (create → search → edit → deactivate, no console errors, DB and audit rows checked), plus 9 feature tests; full suite 89/89 green.
 
-**Still not built in Web Admin** (docs section 29): a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+**Still not built in Web Admin** (docs section 29): a per-activity "sync status" column (unclear what it should show beyond the existing status). `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+
+### Web Admin: Announcements (docs section 28 "pengumuman admin")
+
+`/announcements` (new permission `announcements.send`, seeded for SUPER_ADMIN and ADMIN — existing databases need `php artisan db:seed --class=RolesAndPermissionsSeeder` once): title + body, optionally narrowed to one role and/or one work location. `SendAnnouncementUseCase` fans it out as an `ANNOUNCEMENT` notification per active user, so it appears in the Android notification center and will be pushed like any other notification once FCM exists. The send is audited with the recipient count. There is no announcement history page and a sent announcement cannot be recalled (the form asks for confirmation). Verified by tests and end to end: sent from the browser, shown in the Android app's Notifikasi screen.
 
 ### Web Admin: Dashboard filters (doc schedule "Part 12", continued)
 

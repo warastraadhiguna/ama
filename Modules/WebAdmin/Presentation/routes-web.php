@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\WebAdmin\Presentation\Controllers\ActivityMonitoringController;
+use Modules\WebAdmin\Presentation\Controllers\AnnouncementController;
 use Modules\WebAdmin\Presentation\Controllers\DashboardController;
 use Modules\WebAdmin\Presentation\Controllers\MasterDataPageController;
 use Modules\WebAdmin\Presentation\Controllers\ReportPageController;
@@ -22,6 +23,12 @@ Route::middleware(['auth', 'permission:master_data.manage'])->prefix('master-dat
     Route::get('{resource}', [MasterDataPageController::class, 'index'])->name('web.master-data.index');
     Route::post('{resource}', [MasterDataPageController::class, 'store'])->name('web.master-data.store');
     Route::put('{resource}/{id}', [MasterDataPageController::class, 'update'])->whereNumber('id')->name('web.master-data.update');
+});
+
+// docs section 28 — announcements need their own permission (SUPER_ADMIN/ADMIN).
+Route::middleware(['auth', 'permission:announcements.send'])->prefix('announcements')->group(function (): void {
+    Route::get('/', [AnnouncementController::class, 'create'])->name('web.announcements.create');
+    Route::post('/', [AnnouncementController::class, 'store'])->name('web.announcements.store');
 });
 
 // docs section 29.6 — same permission as the reports API.
