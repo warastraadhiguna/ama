@@ -70,6 +70,8 @@ server {
     root /var/www/ama-backend/public;
     index index.php;
 
+    client_max_body_size 16m;   # UploadPhotoRequest allows 15MB; nginx defaults to 1MB
+
     location / {
         try_files $uri $uri/ /index.php?$query_string;
     }
@@ -92,6 +94,20 @@ sudo ln -s /etc/nginx/sites-available/ama-backend /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d ama.example.com   # docs section 36: HTTPS wajib
 ```
+
+**Photo upload limits.** Evidence photos are validated up to 15MB, but PHP and
+nginx reject far smaller bodies by default (PHP 2MB upload / 8MB post, nginx
+1MB), so a real phone-camera photo fails with 413 before Laravel sees it.
+Besides `client_max_body_size 16m;` above, set in the php-fpm `php.ini` (or
+a `conf.d` drop-in):
+
+```ini
+upload_max_filesize = 16M
+post_max_size = 20M
+```
+
+then reload php-fpm. The Android app also downsizes photos (~430KB), so this
+is headroom, not the normal case.
 
 ## 5. Queue worker + scheduler (systemd)
 

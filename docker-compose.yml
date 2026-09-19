@@ -5,6 +5,7 @@ services:
       dockerfile: docker/php/Dockerfile
     volumes:
       - .:/var/www/html
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/zz-uploads.ini
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
