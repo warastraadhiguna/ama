@@ -111,6 +111,23 @@ post_max_size = 20M
 then reload php-fpm. The Android app also downsizes photos (~430KB), so this
 is headroom, not the normal case.
 
+## Security notes (production)
+
+- **HTTPS is required.** `APP_ENV=production` makes the session cookie `Secure`
+  by default and turns on HSTS (only sent over HTTPS). Set `SESSION_SECURE_COOKIE`
+  explicitly if you terminate TLS in front of PHP and need to override.
+- **Rate limits:** Web Admin login 5/min per email+IP (30/min per IP); API login
+  and refresh 10/min per IP; every other API call 120/min per user. Uses the
+  cache store, so `CACHE_STORE=redis` in production keeps them shared across workers.
+- **Response headers** (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`,
+  `Permissions-Policy`) are set by the app. There is deliberately **no
+  Content-Security-Policy** yet — it must be written against the real hosts
+  (map tiles, MinIO/S3 photo URLs) and tested; do not add one blindly.
+- **First admin:** `php artisan ama:create-admin` (see step 3). The seeder creates
+  no accounts outside local/testing.
+- Not done: 2FA for admins, password-reset flow, account lockout notifications,
+  dependency/CVE scanning in CI. These are worth deciding before go-live.
+
 ## 5. Queue worker + scheduler (systemd)
 
 `/etc/systemd/system/ama-queue.service`:

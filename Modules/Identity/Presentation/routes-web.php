@@ -6,7 +6,7 @@ use Modules\Identity\Presentation\Controllers\WebUserController;
 
 Route::middleware('guest')->group(function (): void {
     Route::get('login', [WebAuthController::class, 'showLogin'])->name('login');
-    Route::post('login', [WebAuthController::class, 'login']);
+    Route::post('login', [WebAuthController::class, 'login'])->middleware('throttle:web-login');
 });
 
 Route::middleware('auth')->post('logout', [WebAuthController::class, 'logout'])->name('logout');
