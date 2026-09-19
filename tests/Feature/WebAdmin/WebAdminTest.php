@@ -2,8 +2,12 @@
 
 namespace Tests\Feature\WebAdmin;
 
+use App\Models\Activity;
+use App\Models\ActivityLocation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Modules\Integrity\Domain\Enums\IntegrityStatus;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -61,6 +65,40 @@ class WebAdminTest extends TestCase
 
         $this->actingAs($admin)->get('/dashboard')->assertOk();
         $this->actingAs($admin)->get('/activities')->assertOk();
+    }
+
+    public function test_dashboard_filters_narrow_every_card_and_default_to_today(): void
+    {
+        $admin = $this->admin();
+        $mine = User::factory()->create();
+        $other = User::factory()->create();
+
+        Activity::factory()->for($mine, 'creator')->create();
+        Activity::factory()->for($other, 'creator')->count(2)->create();
+        ActivityLocation::factory()
+            ->for(Activity::factory()->for($mine, 'creator'), 'activity')
+            ->create(['integrity_status' => IntegrityStatus::Suspicious]);
+        ActivityLocation::factory()
+            ->for(Activity::factory()->for($other, 'creator'), 'activity')
+            ->create(['integrity_status' => IntegrityStatus::Suspicious]);
+
+        $this->actingAs($admin)->get('/dashboard')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('isToday', true)
+                ->where('summary.activities_today', 7) // 3 direct + 2 for the locations + 2 their capture-session factories add
+                ->where('summary.location_alerts', 2));
+
+        $this->actingAs($admin)->get("/dashboard?creator_id={$mine->id}")
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.activities_today', 2)
+                ->where('summary.location_alerts', 1));
+
+        $this->actingAs($admin)->get('/dashboard?date=2000-01-01')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('isToday', false)
+                ->where('day', '2000-01-01')
+                ->where('summary.activities_today', 0)
+                ->where('summary.location_alerts', 0));
     }
 
     public function test_logout_clears_the_session(): void

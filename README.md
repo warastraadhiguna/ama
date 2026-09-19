@@ -193,7 +193,11 @@ Rules worth knowing (all covered in `tests/Feature/Identity/WebUserManagementTes
 
 Verified in a headless browser against the real stack (create → search → edit → deactivate, no console errors, DB and audit rows checked), plus 9 feature tests; full suite 89/89 green.
 
-**Still not built in Web Admin** (docs section 29): dashboard filters, a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+**Still not built in Web Admin** (docs section 29): a per-activity "sync status" column, and a notification/announcement screen. `phone`/`nip` have no format rules beyond uniqueness/length (OPEN QUESTION with the product owner).
+
+### Web Admin: Dashboard filters (doc schedule "Part 12", continued)
+
+`/dashboard` (docs section 29.1) now takes `date` (default today), `work_location_id`, `creator_id`, `activity_type_id`, `product_id`; each narrows all four cards (activities, plans, not realized as of that date, location alerts). The doc's "status" filter is not on the dashboard because its cards already are status counts; it exists on the Activities list. Verified by a test and in a headless browser against real data.
 
 ### Web Admin: Master Data (doc schedule "Part 12", continued)
 
