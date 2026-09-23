@@ -6,6 +6,8 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -43,5 +45,20 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(5)->by($request->ip().'|'.strtolower((string) $request->input('email'))),
             Limit::perMinute(30)->by($request->ip()),
         ]);
+
+        // Laravel's local disk driver has no temporaryUrl() out of the box
+        // (only 's3' does) — needed when FILESYSTEM_DISK=local, i.e. no
+        // object storage account is set up yet (e.g. a small pilot
+        // deployment). Builds a signed, time-limited route instead — same
+        // "possess the link, nothing more" trust model the Web Admin
+        // evidence viewer already relies on for S3's presigned URLs, so
+        // switching disks later needs no further code change.
+        Storage::disk('local')->buildTemporaryUrlsUsing(
+            fn (string $path, \DateTimeInterface $expiration, array $options) => URL::temporarySignedRoute(
+                'evidence-photos.show',
+                $expiration,
+                ['path' => $path],
+            ),
+        );
     }
 }

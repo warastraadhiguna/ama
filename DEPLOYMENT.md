@@ -26,10 +26,31 @@ sudo -u postgres psql -d ama -c 'CREATE EXTENSION postgis;'
 ```
 
 Object storage: point `AWS_*` at a real bucket (AWS S3 or Cloudflare R2 —
-docs section 5.5). MinIO was only ever the local Docker Compose stand-in.
-`AWS_ENDPOINT_PUBLIC` should equal `AWS_ENDPOINT` here (both the same
-public endpoint) — the split only exists to work around MinIO's
-Docker-internal hostname in local dev.
+docs section 5.5). MinIO was only ever the local Docker Compose stand-in —
+and as of 2026-09-23, MinIO's standalone server/client *binary* downloads
+are discontinued/archived upstream (both dl.min.io and GitHub Releases
+404/410), so it can no longer be installed on a plain server this way at
+all (Docker images are a separate channel and still work — irrelevant
+here, since this guide is the no-Docker path). `AWS_ENDPOINT_PUBLIC`
+should equal `AWS_ENDPOINT` here (both the same public endpoint) — the
+split only exists to work around MinIO's Docker-internal hostname in
+local dev.
+
+**No object storage account yet? Use `FILESYSTEM_DISK=local` instead.**
+Set `FILESYSTEM_DISK=local` in `.env` and skip the `AWS_*` values entirely —
+photos are stored under `storage/app/private` on the server's own disk.
+The Web Admin evidence viewer's photo URLs work unchanged (see
+`AppServiceProvider`'s `buildTemporaryUrlsUsing()` and the
+`evidence-photos.show` route in `routes/web.php`: a signed, time-limited
+link standing in for S3's `temporaryUrl()`, same trust model). Switching
+to real S3/R2 later needs no code change, just filling in the `AWS_*`
+values — old photos already on local disk would need a manual copy to the
+bucket, though. **This is only as good as the `chown` step below** — the
+photos are written and later read by whichever user php-fpm runs as
+(normally `www-data`); if that step is skipped, or you hand-place a file
+as a different user (e.g. root over SSH), reads 404 with no other symptom.
+This cost real time to track down while building it — the fix was
+literally just getting the ownership consistent.
 
 ## 3. Deploy the code
 

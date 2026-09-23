@@ -112,7 +112,12 @@ class ActivityMonitoringController extends Controller
                     ]),
                     'photos' => $session->photos->map(fn ($photo) => [
                         'id' => $photo->id,
-                        'url' => Storage::disk('s3_public')->temporaryUrl($photo->storage_path, now()->addMinutes(10)),
+                        // Default disk, not a hardcoded name: works whether
+                        // that's 's3'/real object storage (temporaryUrl() is
+                        // native) or 'local' (see AppServiceProvider's
+                        // buildTemporaryUrlsUsing()) — no code change needed
+                        // when a deployment switches between them.
+                        'url' => Storage::temporaryUrl($photo->storage_path, now()->addMinutes(10)),
                         'sha256_hash' => $photo->sha256_hash,
                         'file_size' => $photo->file_size,
                         'integrity_status' => $photo->integrity_status,
