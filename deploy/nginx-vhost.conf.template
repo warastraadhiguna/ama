@@ -1,0 +1,33 @@
+# AMA nginx site — filled in by deploy/install.sh (it substitutes the domain, app dir and php-fpm socket).
+# HTTP only here; `certbot --nginx` adds the 443 block and the redirect.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+
+    root __APP_DIR__/public;
+    index index.php;
+
+    # UploadPhotoRequest allows 15MB; nginx's own default is 1MB.
+    client_max_body_size 16m;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Only index.php is ever executed (Laravel's single entry point).
+    location = /index.php {
+        include fastcgi_params;
+        fastcgi_pass unix:__PHP_FPM_SOCK__;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        # Scoped to THIS site only — the php-fpm pool is shared with other sites, so its
+        # global php.ini is deliberately left alone.
+        fastcgi_param PHP_VALUE "upload_max_filesize=16M \n post_max_size=20M";
+        fastcgi_read_timeout 120s;
+    }
+
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+}

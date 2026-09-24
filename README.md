@@ -6,7 +6,7 @@ Source of truth for requirements/architecture: [`docs/AMA_SYSTEM_DOCUMENTATION_v
 
 ## Stack
 
-- Laravel 13 (PHP 8.5)
+- Laravel 13 (PHP 8.4+ in production — the floor from composer.lock is 8.4.1; the dev container runs 8.5)
 - PostgreSQL 16 + PostGIS 3.4
 - Redis (cache, session, queue)
 - MinIO (S3-compatible object storage for evidence photos; local dev only — see docs section 5.5)

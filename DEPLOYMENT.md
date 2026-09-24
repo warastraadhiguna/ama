@@ -6,16 +6,40 @@ real Ubuntu server, matching docs section 38's deployment baseline
 (Nginx -> Laravel -> PostgreSQL/PostGIS + Redis + S3-compatible storage,
 plus a queue worker and the scheduler).
 
+## Quick path: scripts in `deploy/` (used for the first real deploy, 2026-09-24)
+
+Steps 3-5 below are automated by `deploy/install.sh`, once steps 1-2 (packages,
+database with PostGIS) are done:
+
+```bash
+git clone https://github.com/warastraadhiguna/ama.git /var/www/ama/html
+cd /var/www/ama/html && bash deploy/install.sh
+```
+
+Written for a **shared, live server** (the first deploy went onto one already
+serving ~40 other sites): it checks everything before changing anything, always
+calls `php8.4` explicitly (the box runs PHP 5.6 through 8.4 side by side, so a bare
+`php` may be the wrong one), only *adds* an nginx site (`nginx -t` before any
+reload, and the new site is taken back out if the test fails), never touches the
+shared php-fpm `php.ini` (the 16MB upload limit is set per-site in the vhost), and
+installs a memory-capped queue worker, the scheduler cron, and a daily backup.
+`deploy/update.sh` releases later versions; `deploy/backup.sh` is the backup itself.
+It has **not** been run against a real server when this was written — the first run
+is the test; read its output.
+
+Real PHP floor is **8.4.1** (`composer.lock`), not the 8.5 an earlier version of this
+guide claimed; `php8.4` from ondrej/php is what the scripts use.
+
 ## 1. Prerequisites (Ubuntu 22.04/24.04 LTS)
 
 ```bash
 sudo apt update
 sudo apt install -y nginx postgresql-16 postgresql-16-postgis-3 redis-server \
-    php8.5-fpm php8.5-pgsql php8.5-redis php8.5-gd php8.5-zip php8.5-mbstring \
-    php8.5-xml php8.5-bcmath php8.5-curl composer nodejs npm certbot python3-certbot-nginx
+    php8.4-fpm php8.4-pgsql php8.4-redis php8.4-gd php8.4-zip php8.4-mbstring \
+    php8.4-xml php8.4-bcmath php8.4-curl composer nodejs npm certbot python3-certbot-nginx
 ```
 
-(If Ubuntu's default repos don't carry PHP 8.5 yet, add [ondrej/php](https://launchpad.net/~ondrej/+archive/ubuntu/php) first.)
+(If Ubuntu's default repos don't carry PHP 8.4 yet, add [ondrej/php](https://launchpad.net/~ondrej/+archive/ubuntu/php) first.)
 
 ## 2. Database and object storage
 
@@ -66,7 +90,7 @@ php artisan migrate --force
 php artisan db:seed --force              # roles, permissions and starter master data only — no test accounts outside local/testing
 php artisan ama:create-admin you@company.com --name="Your Name"   # prompts for the password; the first login
 php artisan config:cache
-php artisan route:cache
+# (no route:cache: routes/web.php has closure routes, which Laravel cannot cache)
 php artisan view:cache
 sudo chown -R www-data:www-data storage bootstrap/cache
 ```
@@ -100,7 +124,7 @@ server {
     }
 
     location ~ \.php$ {
-        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
@@ -189,7 +213,7 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 php artisan migrate --force
 php artisan optimize:clear && php artisan optimize
-sudo systemctl restart php8.5-fpm ama-queue
+sudo systemctl restart php8.4-fpm ama-queue
 ```
 
 ## What still needs real credentials before it's fully functional here
