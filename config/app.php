@@ -17,6 +17,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Client Company Name
+    |--------------------------------------------------------------------------
+    |
+    | Shown on the Web Admin login page next to the product name. It is
+    | per-installation (the same code is deployed at different client
+    | companies), so it lives in .env and defaults to empty — never hardcode
+    | a client's name in the source.
+    |
+    */
+
+    'company_name' => env('APP_COMPANY_NAME'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

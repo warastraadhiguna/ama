@@ -27,6 +27,8 @@ installs a memory-capped queue worker, the scheduler cron, and a daily backup.
 It has **not** been run against a real server when this was written — the first run
 is the test; read its output.
 
+**Client name on the login page.** `APP_COMPANY_NAME` in `.env` (asked by `install.sh`, optional) is shown next to "Web Admin"; empty shows just "Web Admin". It is per-installation on purpose — no client name lives in the source. On a server whose `.env` already exists, add the line by hand, then `cd /var/www/ama/html && php8.4 artisan config:cache` (production caches the config, so `.env` edits are ignored until then; the queue worker also needs `systemctl restart ama-queue`).
+
 Real PHP floor is **8.4.1** (`composer.lock`), not the 8.5 an earlier version of this
 guide claimed; `php8.4` from ondrej/php is what the scripts use.
 

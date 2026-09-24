@@ -90,6 +90,9 @@ read -r -p "Email admin pertama (juga untuk notifikasi sertifikat HTTPS): " ADMI
 [[ "$ADMIN_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || die "Format email tidak valid."
 read -r -p "Nama admin pertama: " ADMIN_NAME
 [ -n "$ADMIN_NAME" ] || die "Nama tidak boleh kosong."
+read -r -p "Nama perusahaan klien untuk halaman login (boleh kosong, bisa diubah nanti di .env): " COMPANY_NAME
+# drop characters that would break the double-quoted .env line
+COMPANY_NAME="$(printf '%s' "$COMPANY_NAME" | sed 's/["$`\]//g')"
 
 # ---- 1. .env -----------------------------------------------------------------
 say "1/9  File .env"
@@ -102,6 +105,7 @@ else
     || die "Login database '${DB_USER}' lewat password gagal (cek pg_hba.conf)."
   cat > .env <<EOF
 APP_NAME="Agro Marketing App"
+APP_COMPANY_NAME="${COMPANY_NAME}"
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false

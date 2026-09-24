@@ -1,6 +1,8 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 
 export default function Login() {
+    // Per-installation client name from APP_COMPANY_NAME (null when unset).
+    const { company } = usePage().props;
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -19,7 +21,7 @@ export default function Login() {
             <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
                 <div className="mb-6 text-center">
                     <h1 className="text-xl font-semibold text-green-800">Agro Marketing App</h1>
-                    <p className="mt-1 text-sm text-gray-500">PT Dummy — Web Admin</p>
+                    <p className="mt-1 text-sm text-gray-500">{company ? `${company} — Web Admin` : 'Web Admin'}</p>
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">

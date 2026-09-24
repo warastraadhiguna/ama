@@ -27,6 +27,15 @@ class WebAdminTest extends TestCase
         return $user;
     }
 
+    public function test_the_login_page_shows_the_configured_company_name_or_none(): void
+    {
+        config(['app.company_name' => null]);
+        $this->get('/login')->assertInertia(fn (Assert $page) => $page->where('company', null));
+
+        config(['app.company_name' => 'PT Contoh']);
+        $this->get('/login')->assertInertia(fn (Assert $page) => $page->where('company', 'PT Contoh'));
+    }
+
     public function test_a_guest_is_redirected_to_login(): void
     {
         $this->get('/dashboard')->assertRedirect('/login');
